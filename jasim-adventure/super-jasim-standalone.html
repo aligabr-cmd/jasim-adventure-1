@@ -68,6 +68,8 @@
 		<button id="copyCode" class="sharebtn">📋 نسخ الكود الكامل</button>
 		<button id="copyCmds" class="sharebtn">📋 نسخ أوامر التشغيل</button>
 		<button id="openServerUrl" class="sharebtn">▶ فتح رابط التشغيل</button>
+		<button id="openCode" class="sharebtn">🗎 فتح الكود</button>
+		<button id="downloadCode" class="sharebtn">⬇ تنزيل الملف</button>
 	</div>
 	<div class="game-wrap">
 		<canvas id="game"></canvas>
@@ -204,6 +206,8 @@
 		const copyCodeBtn = document.getElementById('copyCode');
 		const copyCmdsBtn = document.getElementById('copyCmds');
 		const openServerBtn = document.getElementById('openServerUrl');
+		const openCodeBtn = document.getElementById('openCode');
+		const downloadCodeBtn = document.getElementById('downloadCode');
 		if(openShare){ openShare.addEventListener('click', ()=>{
 			const url = location.href;
 			shareUrl.value = url;
@@ -217,14 +221,19 @@
 
 		// نسخ نص إلى الحافظة مع بديل
 		async function copyText(text){
-			try { await navigator.clipboard.writeText(text); return true; }
-			catch(e){
-				try{
-					const ta = document.createElement('textarea');
-					ta.style.position='fixed'; ta.style.opacity='0'; ta.value=text; document.body.appendChild(ta);
-					ta.select(); document.execCommand('copy'); document.body.removeChild(ta); return true;
-				}catch(_){ return false; }
-			}
+			// المحاولة 1: Clipboard API (يتطلب HTTPS أو localhost وبعض المتصفحات)
+			try { if(navigator.clipboard && window.isSecureContext !== false){ await navigator.clipboard.writeText(text); return true; } } catch(_){ }
+			// المحاولة 2: عنصر textarea مخفي + تحديد يدوي (يعمل في معظم المتصفحات)
+			try{
+				const ta = document.createElement('textarea');
+				ta.style.position='fixed'; ta.style.left='-10000px'; ta.style.top='-10000px'; ta.value=text;
+				document.body.appendChild(ta);
+				ta.focus(); ta.select(); ta.setSelectionRange(0, ta.value.length);
+				const ok = document.execCommand('copy');
+				document.body.removeChild(ta);
+				return ok;
+			}catch(_){ }
+			return false;
 		}
 
 		// زر: نسخ الكود الكامل (الملف كله)
@@ -249,6 +258,33 @@
 			const host = location.hostname || 'localhost';
 			const url = `http://${host}:8000/jasim-adventure/super-jasim-standalone.html`;
 			window.open(url, '_blank');
+		}); }
+
+		// زر: فتح الكود في تبويب جديد (بديل آمن للنسخ اليدوي)
+		function openCodeInTab(html){
+			const blob = new Blob([html], {type:'text/html;charset=utf-8'});
+			const url = URL.createObjectURL(blob);
+			window.open(url, '_blank');
+			setTimeout(()=> URL.revokeObjectURL(url), 30000);
+		}
+		if(openCodeBtn){ openCodeBtn.addEventListener('click', ()=>{
+			const full = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+			openCodeInTab(full);
+		}); }
+
+		// زر: تنزيل الملف كـ HTML
+		function downloadAsFile(html){
+			const blob = new Blob([html], {type:'text/html;charset=utf-8'});
+			const a = document.createElement('a');
+			a.href = URL.createObjectURL(blob);
+			a.download = 'super-jasim-standalone.html';
+			document.body.appendChild(a);
+			a.click();
+			setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+		}
+		if(downloadCodeBtn){ downloadCodeBtn.addEventListener('click', ()=>{
+			const full = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+			downloadAsFile(full);
 		}); }
 
 		function start(){ state.game='playing'; hideMsg(); }
