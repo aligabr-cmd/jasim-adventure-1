@@ -65,6 +65,9 @@
 	<div class="sharebar">
 		<button id="openShare" class="sharebtn">🔗 مشاركة / QR</button>
 		<button id="fullscreen" class="sharebtn">⛶ ملء الشاشة</button>
+		<button id="copyCode" class="sharebtn">📋 نسخ الكود الكامل</button>
+		<button id="copyCmds" class="sharebtn">📋 نسخ أوامر التشغيل</button>
+		<button id="openServerUrl" class="sharebtn">▶ فتح رابط التشغيل</button>
 	</div>
 	<div class="game-wrap">
 		<canvas id="game"></canvas>
@@ -198,6 +201,9 @@
 		const copyShare = document.getElementById('copyShare');
 		const nativeShare = document.getElementById('nativeShare');
 		const closeOverlay = document.getElementById('closeOverlay');
+		const copyCodeBtn = document.getElementById('copyCode');
+		const copyCmdsBtn = document.getElementById('copyCmds');
+		const openServerBtn = document.getElementById('openServerUrl');
 		if(openShare){ openShare.addEventListener('click', ()=>{
 			const url = location.href;
 			shareUrl.value = url;
@@ -208,6 +214,42 @@
 		if(nativeShare){ nativeShare.addEventListener('click', ()=>{ if(navigator.share){ navigator.share({title:'سوبر جاسم', text:'جرّب لعبة سوبر جاسم!', url:location.href}); } else alert('المشاركة الأصلية غير مدعومة'); }); }
 		if(closeOverlay){ closeOverlay.addEventListener('click', ()=> overlay.style.display='none'); }
 		const fsBtn = document.getElementById('fullscreen'); if(fsBtn){ fsBtn.addEventListener('click', ()=>{ if(!document.fullscreenElement){ document.documentElement.requestFullscreen().catch(()=>{});} else { document.exitFullscreen(); } }); }
+
+		// نسخ نص إلى الحافظة مع بديل
+		async function copyText(text){
+			try { await navigator.clipboard.writeText(text); return true; }
+			catch(e){
+				try{
+					const ta = document.createElement('textarea');
+					ta.style.position='fixed'; ta.style.opacity='0'; ta.value=text; document.body.appendChild(ta);
+					ta.select(); document.execCommand('copy'); document.body.removeChild(ta); return true;
+				}catch(_){ return false; }
+			}
+		}
+
+		// زر: نسخ الكود الكامل (الملف كله)
+		if(copyCodeBtn){ copyCodeBtn.addEventListener('click', async ()=>{
+			const full = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+			const ok = await copyText(full);
+			const old = copyCodeBtn.textContent; copyCodeBtn.textContent = ok ? '✅ تم نسخ الكود' : '❌ فشل النسخ';
+			setTimeout(()=> copyCodeBtn.textContent = old, 1800);
+		}); }
+
+		// زر: نسخ أوامر التشغيل
+		if(copyCmdsBtn){ copyCmdsBtn.addEventListener('click', async ()=>{
+			const host = location.hostname || 'localhost';
+			const cmds = `# تشغيل خادم محلي سريع ثم فتح اللعبة\ncd /workspace\npython3 -m http.server 8000\n\n# افتح أحد الروابط التالية بعد التشغيل:\nhttp://localhost:8000/jasim-adventure/super-jasim-standalone.html\nhttp://${host}:8000/jasim-adventure/super-jasim-standalone.html\n`;
+			const ok = await copyText(cmds);
+			const old = copyCmdsBtn.textContent; copyCmdsBtn.textContent = ok ? '✅ تم نسخ الأوامر' : '❌ فشل النسخ';
+			setTimeout(()=> copyCmdsBtn.textContent = old, 1800);
+		}); }
+
+		// زر: فتح رابط التشغيل مباشرة
+		if(openServerBtn){ openServerBtn.addEventListener('click', ()=>{
+			const host = location.hostname || 'localhost';
+			const url = `http://${host}:8000/jasim-adventure/super-jasim-standalone.html`;
+			window.open(url, '_blank');
+		}); }
 
 		function start(){ state.game='playing'; hideMsg(); }
 		function togglePause(){ if(state.game==='playing'){ state.game='paused'; showMsg('متوقف مؤقتاً','اضغط P للاستمرار'); } else if(state.game==='paused'){ state.game='playing'; hideMsg(); } }
